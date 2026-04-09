@@ -37,12 +37,13 @@ for k, v in SESSION_DEFAULTS.items():
 with st.sidebar:
     st.markdown("## ⚙️ Navigation")
 
-    # Theme Toggle
+    # Theme Toggle (Fixed: added proper label)
     theme_mode = st.radio(
-        "🌗 Theme Mode",
+        "🌗 Theme Mode",                    # ← This label was missing/empty before
         options=["Dark Mode", "Light Mode"],
-        index=0,   # Default = Dark
-        horizontal=True
+        index=0,
+        horizontal=True,
+        key="theme_selector"
     )
 
     # Restart Button
@@ -58,7 +59,7 @@ with st.sidebar:
     # App Mode Selector
     st.markdown("### 🎛️ App Mode")
     mode_choice = st.radio(
-        label="",
+        "Select Mode",                      # ← Added clear label here too
         options=["🧪 Manual Learning Mode", "⚡ Auto Quick Mode"],
         index=0,
         key="mode_selector"
