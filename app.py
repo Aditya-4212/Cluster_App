@@ -21,8 +21,8 @@ from pipeline.steps import (
 
 # ── Page config (must be first Streamlit call) ──────────────
 st.set_page_config(
-    page_title="ML Clustering Studio",
-    page_icon="🧠",
+    page_title="Clustering",
+    page_icon="🕸️",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -37,7 +37,7 @@ for k, v in SESSION_DEFAULTS.items():
 
 # ── Sidebar ─────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("## ⚙️ Navigation")
+    st.markdown("## Guide")
 
     step_labels = [
         "📂 Load Data",
@@ -46,7 +46,7 @@ with st.sidebar:
         "⚙️ Feature Engineering",
         "🤖 Clustering",
         "📈 Results",
-        "🎓 Learn",
+        "🎓 Learn ML",
     ]
 
     for i, name in enumerate(step_labels):
@@ -99,4 +99,4 @@ except Exception as e:
 
 # ── Footer ───────────────────────────────────────────────────
 st.markdown("---")
-st.caption("🚀 Built with Streamlit · ML Clustering Studio")
+st.caption("Work in Progress")
