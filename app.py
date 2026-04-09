@@ -1,11 +1,9 @@
 # ============================================================
 # app.py
 # Entry point — page config, CSS injection, session init, router
-# Run with: streamlit run app.py
 # ============================================================
 
 import streamlit as st
-
 from config.settings import SESSION_DEFAULTS
 from config.theme import inject_css
 from components.ui import hero, pipeline_stepper
@@ -27,7 +25,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ── Inject dark theme CSS ───────────────────────────────────
+# ── Inject theme CSS ────────────────────────────────────────
 inject_css()
 
 # ── Session state init ──────────────────────────────────────
@@ -39,6 +37,37 @@ for k, v in SESSION_DEFAULTS.items():
 with st.sidebar:
     st.markdown("## ⚙️ Navigation")
 
+    # Theme Toggle
+    theme_mode = st.radio(
+        "🌗 Theme Mode",
+        options=["Dark Mode", "Light Mode"],
+        index=0,   # Default = Dark
+        horizontal=True
+    )
+
+    # Restart Button
+    if st.button("🔄 Restart Process", type="secondary", use_container_width=True):
+        from config.settings import SESSION_DEFAULTS
+        for k, v in SESSION_DEFAULTS.items():
+            st.session_state[k] = v
+        st.success("✅ Process restarted successfully!")
+        st.rerun()
+
+    st.markdown("---")
+
+    # App Mode Selector
+    st.markdown("### 🎛️ App Mode")
+    mode_choice = st.radio(
+        label="",
+        options=["🧪 Manual Learning Mode", "⚡ Auto Quick Mode"],
+        index=0,
+        key="mode_selector"
+    )
+    st.session_state.mode = "manual" if "Manual" in mode_choice else "auto"
+
+    st.markdown("---")
+
+    # Navigation Steps
     step_labels = [
         "📂 Load Data",
         "📊 EDA",
