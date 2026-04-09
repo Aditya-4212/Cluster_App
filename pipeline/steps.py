@@ -764,8 +764,22 @@ def _run_automl(df: pd.DataFrame, scaler: str, reduction: str, n_km: int) -> Non
 # STEP 5 — RESULTS
 # ============================================================
 
+# ============================================================
+# STEP 5 — RESULTS
+# ============================================================
 def step_results() -> None:
     section("Step 6 · Results & Visualisation")
+
+    # FIXED: Proper fallback without using 'or' on DataFrames (pandas 2.x+ strict truth value)
+    df_src = st.session_state.get("df_engineered")
+    if df_src is None:
+        df_src = st.session_state.get("df_clean")
+    if df_src is None:
+        df_src = st.session_state.get("df_raw")
+
+    if df_src is None:
+        st.warning("Run clustering first.")
+        st.stop()
 
     X      = st.session_state.X_processed
     labels = st.session_state.labels
@@ -775,16 +789,12 @@ def step_results() -> None:
         st.warning("Run clustering first.")
         st.stop()
 
-    # Align labels to the correct source DataFrame using index
-    df_src = st.session_state.df_engineered or st.session_state.df_clean or st.session_state.df_raw
-    if df_src is None:
-        st.warning("Could not find source dataframe.")
-        st.stop()
-
+    # Align labels to the correct source DataFrame
     df_r = df_src.reset_index(drop=True).copy()
+
     if len(df_r) != len(labels):
-        # Fallback: try clean dataframe
-        df_fallback = st.session_state.df_clean or st.session_state.df_raw
+        # Fallback logic
+        df_fallback = st.session_state.get("df_clean") or st.session_state.get("df_raw")
         if df_fallback is not None and len(df_fallback) == len(labels):
             df_r = df_fallback.reset_index(drop=True).copy()
         else:
@@ -888,7 +898,7 @@ def step_results() -> None:
                     kind="learn",
                 )
             finally:
-                plt.close(fig_d)  # always close to prevent memory leak
+                plt.close(fig_d)
 
     with tab_exp:
         section("Export Your Results")
@@ -930,8 +940,6 @@ def step_results() -> None:
     if st.button("📈 View Learning Module →", type="primary"):
         st.session_state.step = 6
         st.rerun()
-
-
 # ============================================================
 # STEP 6 — LEARN
 # ============================================================
