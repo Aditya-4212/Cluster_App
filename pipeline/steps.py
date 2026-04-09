@@ -477,7 +477,7 @@ def step_features() -> None:
 
 def step_cluster() -> None:
     section("Step 5 · Clustering")
-    df = st.session_state.df_engineered or st.session_state.df_clean
+    df = st.session_state.df_engineered if st.session_state.df_engineered is not None else st.session_state.df_clean
     if df is None:
         st.warning("Complete previous steps first.")
         st.stop()
