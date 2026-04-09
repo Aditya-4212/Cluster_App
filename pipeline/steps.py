@@ -1,7 +1,6 @@
 # ============================================================
 # pipeline/steps.py
 # One function per pipeline step — called from app.py.
-# To edit a step: find the function, change only that block.
 # ============================================================
 
 from __future__ import annotations
@@ -61,7 +60,6 @@ def _safe_html(value) -> str:
 
 def step_load(uploaded) -> None:
     section("Step 1 · Load Your Dataset")
-
     explain(
         "📥 What is this step?",
         "We start by <strong>loading your CSV file</strong>. "
@@ -406,7 +404,7 @@ def step_features() -> None:
     num_cols = get_numeric_cols(df)
     df_eng   = df.copy()
 
-    # ── Ratio feature ──
+    # ── Ratio / Interaction features ──
     section("Create New Features")
     if len(num_cols) >= 2:
         with st.expander("➕ Add ratio feature (A ÷ B)"):
@@ -561,33 +559,22 @@ def _algo_params_ui(algo: str) -> dict:
         params["n_clusters"] = c1.slider("Clusters (k)", 2, 15, 3)
         params["init"]       = c2.selectbox("Init", ["k-means++", "random"])
         params["max_iter"]   = c3.slider("Max iterations", 100, 1000, 300, step=50)
-        explain(
-            "🔧 KMeans Parameters",
-            "<strong>k</strong>: number of clusters — use elbow curve to tune. "
-            "<strong>k-means++</strong>: smarter init, almost always better. "
-            "<strong>max_iter</strong>: 300 is usually enough.",
-            kind="learn",
-        )
+        explain("🔧 KMeans Parameters", "<strong>k</strong>: number of clusters — use elbow curve to tune. "
+                "<strong>k-means++</strong>: smarter init, almost always better. "
+                "<strong>max_iter</strong>: 300 is usually enough.", kind="learn")
     elif algo == "DBSCAN":
         c1, c2 = st.columns(2)
         params["eps"]         = c1.slider("ε (epsilon)", 0.05, 3.0, 0.5, step=0.05)
         params["min_samples"] = c2.slider("Min Samples", 2, 30, 5)
-        explain(
-            "🔧 DBSCAN Parameters",
-            "<strong>ε</strong>: max distance to be a neighbour. Too small = noise. Too large = merged. "
-            "<strong>min_samples</strong>: neighbours needed for a core point. Rule: ≈ 2×features.",
-            kind="learn",
-        )
+        explain("🔧 DBSCAN Parameters", "<strong>ε</strong>: max distance to be a neighbour. Too small = noise. "
+                "Too large = merged. <strong>min_samples</strong>: neighbours needed for a core point. "
+                "Rule: ≈ 2×features.", kind="learn")
     elif algo == "Agglomerative":
         c1, c2 = st.columns(2)
         params["n_clusters"] = c1.slider("Clusters", 2, 15, 3)
         params["linkage"]    = c2.selectbox("Linkage", ["ward", "complete", "average", "single"])
-        explain(
-            "🔧 Agglomerative Parameters",
-            "<strong>ward</strong>: minimises within-cluster variance (usually best). "
-            "<strong>complete</strong>: max distance. <strong>average</strong>: mean distance.",
-            kind="learn",
-        )
+        explain("🔧 Agglomerative Parameters", "<strong>ward</strong>: minimises within-cluster variance (usually best). "
+                "<strong>complete</strong>: max distance. <strong>average</strong>: mean distance.", kind="learn")
     elif algo == "Spectral":
         c1, c2 = st.columns(2)
         params["n_clusters"] = c1.slider("Clusters", 2, 10, 3)
@@ -606,31 +593,15 @@ def _algo_params_ui(algo: str) -> dict:
 def _build_model(algo: str, params: dict):
     """Instantiate sklearn model from algo name + params."""
     models = {
-        "KMeans": KMeans(
-            n_clusters=params.get("n_clusters", 3),
-            init=params.get("init", "k-means++"),
-            max_iter=params.get("max_iter", 300),
-            random_state=42,
-            n_init="auto",
-        ),
-        "DBSCAN": DBSCAN(
-            eps=params.get("eps", 0.5),
-            min_samples=params.get("min_samples", 5),
-        ),
-        "Agglomerative": AgglomerativeClustering(
-            n_clusters=params.get("n_clusters", 3),
-            linkage=params.get("linkage", "ward"),
-        ),
-        "Spectral": SpectralClustering(
-            n_clusters=params.get("n_clusters", 3),
-            affinity=params.get("affinity", "rbf"),
-            random_state=42,
-        ),
-        "Birch": Birch(
-            n_clusters=params.get("n_clusters", 3),
-            threshold=params.get("threshold", 0.5),
-            branching_factor=params.get("branching_factor", 50),
-        ),
+        "KMeans": KMeans(n_clusters=params.get("n_clusters", 3), init=params.get("init", "k-means++"),
+                         max_iter=params.get("max_iter", 300), random_state=42, n_init="auto"),
+        "DBSCAN": DBSCAN(eps=params.get("eps", 0.5), min_samples=params.get("min_samples", 5)),
+        "Agglomerative": AgglomerativeClustering(n_clusters=params.get("n_clusters", 3),
+                                                 linkage=params.get("linkage", "ward")),
+        "Spectral": SpectralClustering(n_clusters=params.get("n_clusters", 3),
+                                       affinity=params.get("affinity", "rbf"), random_state=42),
+        "Birch": Birch(n_clusters=params.get("n_clusters", 3), threshold=params.get("threshold", 0.5),
+                       branching_factor=params.get("branching_factor", 50)),
         "MeanShift": MeanShift(bandwidth=params.get("bandwidth")),
     }
     if algo not in models:
@@ -663,7 +634,6 @@ def _run_automl(df: pd.DataFrame, scaler: str, reduction: str, n_km: int) -> Non
     st.session_state.X_processed  = X
     st.session_state["reduction"] = reduction
 
-    # Subsample for AutoML search on large datasets
     _MAX_AUTOML_ROWS = 5000
     X_search = X
     if len(X) > _MAX_AUTOML_ROWS:
@@ -673,14 +643,14 @@ def _run_automl(df: pd.DataFrame, scaler: str, reduction: str, n_km: int) -> Non
 
     configs: list[tuple] = []
     for k in range(2, n_km + 1):
-        configs.append(("KMeans",        {"n_clusters": k}))
+        configs.append(("KMeans", {"n_clusters": k}))
     for k in range(2, 6):
         for link in ["ward", "complete", "average"]:
             configs.append(("Agglomerative", {"n_clusters": k, "linkage": link}))
     for eps in [0.2, 0.4, 0.6, 0.8, 1.0]:
-        configs.append(("DBSCAN",        {"eps": eps, "min_samples": 5}))
+        configs.append(("DBSCAN", {"eps": eps, "min_samples": 5}))
     for k in range(2, 5):
-        configs.append(("Birch",          {"n_clusters": k, "threshold": 0.5}))
+        configs.append(("Birch", {"n_clusters": k, "threshold": 0.5}))
 
     prog   = st.progress(0)
     status = st.empty()
@@ -725,11 +695,9 @@ def _run_automl(df: pd.DataFrame, scaler: str, reduction: str, n_km: int) -> Non
     results.sort(key=lambda x: x["Silhouette ↑"], reverse=True)
     best = results[0]
 
-    # Refit best model on the full dataset
     try:
         best_model = _build_model(best["Algorithm"],
-                                  eval(best["Config"]) if isinstance(best["Config"], str)
-                                  else best["Config"])
+                                  eval(best["Config"]) if isinstance(best["Config"], str) else best["Config"])
         best_labels = best_model.fit_predict(X)
     except Exception:
         best_model  = best["_model"]
@@ -764,13 +732,10 @@ def _run_automl(df: pd.DataFrame, scaler: str, reduction: str, n_km: int) -> Non
 # STEP 5 — RESULTS
 # ============================================================
 
-# ============================================================
-# STEP 5 — RESULTS
-# ============================================================
 def step_results() -> None:
     section("Step 6 · Results & Visualisation")
 
-    # FIXED: Proper fallback without using 'or' on DataFrames (pandas 2.x+ strict truth value)
+    # Safe DataFrame fallback (fixes pandas ValueError)
     df_src = st.session_state.get("df_engineered")
     if df_src is None:
         df_src = st.session_state.get("df_clean")
@@ -793,7 +758,6 @@ def step_results() -> None:
     df_r = df_src.reset_index(drop=True).copy()
 
     if len(df_r) != len(labels):
-        # Fallback logic
         df_fallback = st.session_state.get("df_clean") or st.session_state.get("df_raw")
         if df_fallback is not None and len(df_fallback) == len(labels):
             df_r = df_fallback.reset_index(drop=True).copy()
@@ -940,6 +904,8 @@ def step_results() -> None:
     if st.button("📈 View Learning Module →", type="primary"):
         st.session_state.step = 6
         st.rerun()
+
+
 # ============================================================
 # STEP 6 — LEARN
 # ============================================================
@@ -986,146 +952,83 @@ def step_learn() -> None:
 
 def _beginner_content() -> None:
     topics = [
-        (
-            "What is Machine Learning?",
-            "ML is teaching computers to find patterns <em>without explicit programming</em>. "
-            "Instead of writing rules, you show data and let the computer learn.",
-            "Like showing a child 1000 dog photos instead of listing rules — they learn to recognise dogs.",
-        ),
-        (
-            "What is Clustering?",
-            "<strong>Unsupervised learning</strong> — no labels. The algorithm discovers natural groups.",
-            "Retailer uploads transactions. Clustering finds 'high-value', 'bargain', 'occasional' buyers automatically.",
-        ),
-        (
-            "How Does KMeans Work?",
-            "1. Pick K random centres. 2. Assign each point to nearest centre. "
-            "3. Move centre to average of its points. 4. Repeat until stable.",
-            "Like magnets attracting iron filings — each magnet moves to the centre of its cluster.",
-        ),
-        (
-            "What is a Silhouette Score?",
-            "+1 = clearly in right cluster · 0 = on boundary · -1 = possibly wrong cluster.",
-            "Score 0.7 = great separation. Score 0.3 = fuzzy/overlapping clusters.",
-        ),
+        ("What is Machine Learning?", 
+         "ML is teaching computers to find patterns <em>without explicit programming</em>. "
+         "Instead of writing rules, you show data and let the computer learn.",
+         "Like showing a child 1000 dog photos instead of listing rules — they learn to recognise dogs."),
+        ("What is Clustering?", 
+         "<strong>Unsupervised learning</strong> — no labels. The algorithm discovers natural groups.",
+         "Retailer uploads transactions. Clustering finds 'high-value', 'bargain', 'occasional' buyers automatically."),
+        ("How Does KMeans Work?", 
+         "1. Pick K random centres. 2. Assign each point to nearest centre. "
+         "3. Move centre to average of its points. 4. Repeat until stable.",
+         "Like magnets attracting iron filings — each magnet moves to the centre of its cluster."),
+        ("What is a Silhouette Score?", 
+         "+1 = clearly in right cluster · 0 = on boundary · -1 = possibly wrong cluster.",
+         "Score 0.7 = great separation. Score 0.3 = fuzzy/overlapping clusters."),
     ]
     for title, body, example in topics:
         with st.expander(f"📖 {title}"):
-            st.markdown(
-                f'<div style="font-size:0.85rem;color:#6b7090;line-height:1.8;margin-bottom:1rem">{body}</div>',
-                unsafe_allow_html=True,
-            )
-            st.markdown(
-                f'<div style="background:rgba(34,211,238,0.05);border-left:3px solid #22d3ee;'
-                f'border-radius:4px;padding:0.8rem 1rem;font-size:0.82rem;color:#6b7090;line-height:1.7;">'
-                f'💡 <strong>Example:</strong> {example}</div>',
-                unsafe_allow_html=True,
-            )
+            st.markdown(f'<div style="font-size:0.85rem;color:#6b7090;line-height:1.8;margin-bottom:1rem">{body}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="background:rgba(34,211,238,0.05);border-left:3px solid #22d3ee;border-radius:4px;padding:0.8rem 1rem;font-size:0.82rem;color:#6b7090;line-height:1.7;">💡 <strong>Example:</strong> {example}</div>', unsafe_allow_html=True)
 
 
 def _intermediate_content() -> None:
     topics = [
-        (
-            "The Full ML Pipeline",
-            ["1️⃣ Load Data", "2️⃣ EDA", "3️⃣ Clean", "4️⃣ Feature Engineering",
-             "5️⃣ Preprocessing", "6️⃣ Model Selection", "7️⃣ Evaluation", "8️⃣ Interpret", "9️⃣ Deploy"],
-        ),
-        (
-            "When to Use Each Algorithm",
-            [
-                "<strong>KMeans</strong>: default. Fast. Needs K. Spherical clusters.",
-                "<strong>DBSCAN</strong>: noise/outliers. Finds K. Any shape.",
-                "<strong>Agglomerative</strong>: hierarchy needed. Small–medium data.",
-                "<strong>Spectral</strong>: complex shapes. Expensive.",
-                "<strong>Birch</strong>: very large data. Memory efficient.",
-                "<strong>MeanShift</strong>: no K needed. Slow.",
-            ],
-        ),
-        (
-            "The Curse of Dimensionality",
-            [
-                "As features increase, distances become meaningless.",
-                "Fix 1: PCA — compress dimensions.",
-                "Fix 2: Feature selection — drop redundant features.",
-                "Fix 3: Use cosine similarity.",
-                "Rule of thumb: for N features, aim for ≤ √N clusters.",
-            ],
-        ),
-        (
-            "Choosing K",
-            [
-                "<strong>Elbow</strong>: plot inertia vs K — pick the kink.",
-                "<strong>Silhouette</strong>: plot score vs K — pick the peak.",
-                "<strong>Domain knowledge</strong>: business logic often dictates K.",
-                "Always triangulate with multiple methods.",
-            ],
-        ),
+        ("The Full ML Pipeline", ["1️⃣ Load Data", "2️⃣ EDA", "3️⃣ Clean", "4️⃣ Feature Engineering", "5️⃣ Preprocessing", "6️⃣ Model Selection", "7️⃣ Evaluation", "8️⃣ Interpret", "9️⃣ Deploy"]),
+        ("When to Use Each Algorithm", [
+            "<strong>KMeans</strong>: default. Fast. Needs K. Spherical clusters.",
+            "<strong>DBSCAN</strong>: noise/outliers. Finds K. Any shape.",
+            "<strong>Agglomerative</strong>: hierarchy needed. Small–medium data.",
+            "<strong>Spectral</strong>: complex shapes. Expensive.",
+            "<strong>Birch</strong>: very large data. Memory efficient.",
+            "<strong>MeanShift</strong>: no K needed. Slow.",
+        ]),
+        ("The Curse of Dimensionality", [
+            "As features increase, distances become meaningless.",
+            "Fix 1: PCA — compress dimensions.",
+            "Fix 2: Feature selection — drop redundant features.",
+            "Fix 3: Use cosine similarity.",
+            "Rule of thumb: for N features, aim for ≤ √N clusters.",
+        ]),
+        ("Choosing K", [
+            "<strong>Elbow</strong>: plot inertia vs K — pick the kink.",
+            "<strong>Silhouette</strong>: plot score vs K — pick the peak.",
+            "<strong>Domain knowledge</strong>: business logic often dictates K.",
+            "Always triangulate with multiple methods.",
+        ]),
     ]
     for title, bullets in topics:
         with st.expander(f"⚙️ {title}"):
             for b in bullets:
-                st.markdown(
-                    f'<div style="font-size:0.83rem;color:#6b7090;line-height:1.9;padding:0.15rem 0">• {b}</div>',
-                    unsafe_allow_html=True,
-                )
+                st.markdown(f'<div style="font-size:0.83rem;color:#6b7090;line-height:1.9;padding:0.15rem 0">• {b}</div>', unsafe_allow_html=True)
 
 
 def _advanced_content() -> None:
     topics = [
-        (
-            "Evaluation Beyond Silhouette",
-            "Use a battery: Calinski-Harabasz, Davies-Bouldin, Dunn Index. "
-            "External (with ground truth): ARI, NMI. "
-            "Real insight = <em>business validation</em> by domain experts.",
-        ),
-        (
-            "Preprocessing Choices",
-            "StandardScaler assumes Gaussian. RobustScaler for outliers. "
-            "PCA before clustering can help (removes noise) or hurt (loses cluster structure). "
-            "For text: TF-IDF + cosine. For mixed: Gower distance natively handles categorical + numeric.",
-        ),
-        (
-            "DBSCAN Parameter Tuning",
-            "ε: use k-distance graph — plot sorted distances to kth neighbour, pick ε at the elbow. "
-            "min_samples ≈ 2 × n_features. HDBSCAN removes the need for ε entirely.",
-        ),
-        (
-            "Production Deployment",
-            "Save preprocessor + model in an sklearn Pipeline. Version with MLflow or DVC. "
-            "Monitor cluster drift over time. Mini-batch KMeans for streaming. "
-            "SHAP values for cluster membership explainability.",
-        ),
+        ("Evaluation Beyond Silhouette", "Use a battery: Calinski-Harabasz, Davies-Bouldin, Dunn Index. "
+         "External (with ground truth): ARI, NMI. Real insight = <em>business validation</em> by domain experts."),
+        ("Preprocessing Choices", "StandardScaler assumes Gaussian. RobustScaler for outliers. "
+         "PCA before clustering can help or hurt. For mixed data: Gower distance is useful."),
+        ("DBSCAN Parameter Tuning", "ε: use k-distance graph. min_samples ≈ 2 × n_features. "
+         "HDBSCAN removes the need for ε entirely."),
+        ("Production Deployment", "Save preprocessor + model in an sklearn Pipeline. "
+         "Monitor cluster drift. Use MLflow for versioning."),
     ]
     for title, body in topics:
         with st.expander(f"🔬 {title}"):
-            st.markdown(
-                f'<div style="font-size:0.83rem;color:#6b7090;line-height:1.9">{body}</div>',
-                unsafe_allow_html=True,
-            )
+            st.markdown(f'<div style="font-size:0.83rem;color:#6b7090;line-height:1.9">{body}</div>', unsafe_allow_html=True)
 
 
 def _glossary() -> None:
     terms = {
-        "Clustering":            "Unsupervised grouping of data points by similarity.",
-        "Silhouette Score":      "Measures cluster separation quality. Range: −1 to +1.",
-        "Davies-Bouldin":        "Lower = better. Avg ratio of scatter to inter-cluster distance.",
-        "Calinski-Harabasz":     "Higher = better. Between-cluster vs within-cluster dispersion.",
-        "Inertia":               "KMeans objective: sum of squared distances to cluster centres.",
-        "Elbow Method":          "Plot inertia vs K — pick K where improvement slows.",
-        "PCA":                   "Dimensionality reduction finding axes of maximum variance.",
-        "t-SNE":                 "Non-linear reduction for visualisation. Preserves local structure.",
-        "Imputation":            "Filling missing values (mean, median, KNN).",
-        "StandardScaler":        "Normalises to mean=0, std=1.",
-        "RobustScaler":          "Uses median and IQR — robust to outliers.",
-        "One-Hot Encoding":      "Converts categories into binary columns.",
-        "Outlier":               "Data point far from others. Distorts KMeans.",
-        "Hyperparameter":        "Setting chosen before training — not learned from data.",
-        "Unsupervised Learning": "Learning without labels — finds structure in data.",
-        "Feature Engineering":   "Creating/transforming features to improve model performance.",
-        "Dendrogram":            "Tree showing hierarchical cluster merges.",
-        "DBSCAN":                "Density-based clustering. Groups dense regions, marks sparse as noise.",
-        "Variance Threshold":    "Removes near-constant (low variance) features.",
-        "AutoML":                "Automated model/hyperparameter search — picks the best config.",
+        "Clustering": "Unsupervised grouping of data points by similarity.",
+        "Silhouette Score": "Measures cluster separation quality. Range: −1 to +1.",
+        "Davies-Bouldin": "Lower = better. Avg ratio of scatter to inter-cluster distance.",
+        "Calinski-Harabasz": "Higher = better. Between-cluster vs within-cluster dispersion.",
+        "PCA": "Dimensionality reduction finding axes of maximum variance.",
+        "t-SNE": "Non-linear reduction for visualisation.",
+        "AutoML": "Automated model/hyperparameter search.",
     }
     c1, c2 = st.columns(2)
     for i, (term, defn) in enumerate(terms.items()):
